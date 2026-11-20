@@ -3,6 +3,7 @@ pipeline {
 
     environment {
         DOCKER_USER  = "morningstart123"
+        IMAGE_NAME   = "truyenapi"
         IMAGE_TAG    = "${BUILD_NUMBER}"
         SCANNER_HOME = tool 'sonar-scanner'
     }
@@ -14,19 +15,24 @@ pipeline {
             }
         }
 
-        stage('2. SonarQube Security & Quality Scan') {
+        stage('2. Build & SonarQube Scan') {
             steps {
                 withSonarQubeEnv('SonarQube') {
-                    sh """
-                        ${SCANNER_HOME}/bin/sonar-scanner \
-                          -Dsonar.projectKey=nt548-microservices \
-                          -Dsonar.sources=product-service,user-service
-                    """
+                    dir('truyenapi') {
+                        sh """
+                            chmod +x mvnw
+                            ./mvnw clean test-compile -DskipTests
+                            ${SCANNER_HOME}/bin/sonar-scanner \
+                              -Dsonar.projectKey=nt548-truyenapi \
+                              -Dsonar.sources=src \
+                              -Dsonar.java.binaries=target/classes
+                        """
+                    }
                 }
             }
         }
 
-        stage('3. Build & Push Docker Images') {
+        stage('3. Build & Push Docker Image') {
             steps {
                 withCredentials([usernamePassword(
                     credentialsId: 'dockerhub-token',
@@ -35,14 +41,9 @@ pipeline {
                 )]) {
                     sh """
                         echo \$DOCKER_PASSWORD | docker login -u \$DOCKER_USERNAME --password-stdin
-
-                        docker build -t ${DOCKER_USER}/product-service:${IMAGE_TAG} -t ${DOCKER_USER}/product-service:latest ./product-service
-                        docker push ${DOCKER_USER}/product-service:${IMAGE_TAG}
-                        docker push ${DOCKER_USER}/product-service:latest
-
-                        docker build -t ${DOCKER_USER}/user-service:${IMAGE_TAG} -t ${DOCKER_USER}/user-service:latest ./user-service
-                        docker push ${DOCKER_USER}/user-service:${IMAGE_TAG}
-                        docker push ${DOCKER_USER}/user-service:latest
+                        docker build -t ${DOCKER_USER}/${IMAGE_NAME}:${IMAGE_TAG} -t ${DOCKER_USER}/${IMAGE_NAME}:latest ./truyenapi
+                        docker push ${DOCKER_USER}/${IMAGE_NAME}:${IMAGE_TAG}
+                        docker push ${DOCKER_USER}/${IMAGE_NAME}:latest
                     """
                 }
             }
@@ -53,7 +54,7 @@ pipeline {
                 withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
                     sh """
                         kubectl --insecure-skip-tls-verify apply -f k8s/
-                        kubectl --insecure-skip-tls-verify rollout restart deployment/product-service deployment/user-service
+                        kubectl --insecure-skip-tls-verify rollout restart deployment/truyenapi
                         kubectl --insecure-skip-tls-verify get pods,svc
                     """
                 }
