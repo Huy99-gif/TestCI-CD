@@ -1,0 +1,18 @@
+services:
+  jenkins:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    #image: jenkins/jenkins:lts-jdk17 Cai dat
+    user: root
+    ports: ["8080:8080", "50000:50000"]
+    volumes:
+      - D:/DevopsLearning/DevopsTool/jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+  sonarqube:
+    image: sonarqube:community
+    ports: ["9000:9000"]
+    environment:
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
+    volumes:
+      - D:/DevopsLearning/DevopsTool/sonar_data:/opt/sonarqube/data
