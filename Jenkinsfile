@@ -6,6 +6,8 @@ pipeline {
         IMAGE_NAME   = "truyenapi"
         IMAGE_TAG    = "${BUILD_NUMBER}"
         SCANNER_HOME = tool 'sonar-scanner'
+        JAVA_HOME    = "/usr/lib/jvm/java-17-openjdk-amd64"
+        PATH         = "/usr/lib/jvm/java-17-openjdk-amd64/bin:${env.PATH}"
     }
 
     stages {
